@@ -5,7 +5,10 @@ Date: November 2017
 """
 
 import numpy as np
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
+
+import tensorflow as tf2
 
 def _variable_on_cpu(name, shape, initializer, use_fp16=False):
   """Helper to create a Variable stored on CPU memory.
@@ -39,7 +42,7 @@ def _variable_with_weight_decay(name, shape, stddev, wd, use_xavier=True):
     Variable Tensor
   """
   if use_xavier:
-    initializer = tf.contrib.layers.xavier_initializer()
+    initializer = tf2.initializers.GlorotUniform()
   else:
     initializer = tf.truncated_normal_initializer(stddev=stddev)
   var = _variable_on_cpu(name, shape, initializer)
@@ -524,11 +527,13 @@ def batch_norm_template(inputs, is_training, scope, moments_dims_unused, bn_deca
       normed:        batch-normalized maps
   """
   bn_decay = bn_decay if bn_decay is not None else 0.9
-  return tf.contrib.layers.batch_norm(inputs, 
-                                      center=True, scale=True,
-                                      is_training=is_training, decay=bn_decay,updates_collections=None,
-                                      scope=scope,
-                                      data_format=data_format)
+  channels_order = {
+      'NHWC': 'channels_last',
+      'NCHW': 'channels_first'
+  }
+  axis = 1 if channels_order.get(data_format) == 'channels_first' else -1
+  return tf.keras.layers.BatchNormalization(axis=axis, trainable=is_training,
+                                      center=True, scale=True, momentum=bn_decay)(inputs)
 
 
 def batch_norm_for_fc(inputs, is_training, bn_decay, scope):
