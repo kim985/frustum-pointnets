@@ -36,6 +36,8 @@ parser.add_argument('--decay_step', type=int, default=200000, help='Decay step f
 parser.add_argument('--decay_rate', type=float, default=0.7, help='Decay rate for lr decay [default: 0.7]')
 parser.add_argument('--no_intensity', action='store_true', help='Only use XYZ for training')
 parser.add_argument('--restore_model_path', default=None, help='Restore model path e.g. log/model.ckpt [default: None]')
+parser.add_argument('--data_dir', default=None, help='Directory to pickle files')
+
 FLAGS = parser.parse_args()
 
 # Set training configurations
@@ -67,10 +69,13 @@ BN_DECAY_DECAY_STEP = float(DECAY_STEP)
 BN_DECAY_CLIP = 0.99
 
 # Load Frustum Datasets. Use default data paths.
-TRAIN_DATASET = provider.FrustumDataset(npoints=NUM_POINT, split='train',
-                                        rotate_to_center=True, random_flip=True, random_shift=True, one_hot=True, subset=100)
+# "/mnt/nfs/scratch1/kfaria/frustum_data"
+TRAIN_DATASET = provider.FrustumDataset(npoints=NUM_POINT, split='train', rotate_to_center=True, random_flip=True,
+                                        random_shift=True, one_hot=True, subset=100,
+                                        overwritten_data_path=FLAGS.data_dir)
 TEST_DATASET = provider.FrustumDataset(npoints=NUM_POINT, split='val',
-                                       rotate_to_center=True, one_hot=True, subset=100)
+                                       rotate_to_center=True, one_hot=True, subset=100,
+                                       overwritten_data_path=FLAGS.data_dir)
 
 
 def log_string(out_str):
