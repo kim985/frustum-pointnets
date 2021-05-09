@@ -5,10 +5,12 @@ Date: September 2017
 '''
 from __future__ import print_function
 
-import os
-import sys
 import argparse
 import importlib
+import os
+import sys
+from statistics import mean
+
 import numpy as np
 import tensorflow.compat.v1 as tf
 
@@ -36,8 +38,7 @@ parser.add_argument('--decay_step', type=int, default=200000, help='Decay step f
 parser.add_argument('--decay_rate', type=float, default=0.7, help='Decay rate for lr decay [default: 0.7]')
 parser.add_argument('--no_intensity', action='store_true', help='Only use XYZ for training')
 parser.add_argument('--restore_model_path', default=None, help='Restore model path e.g. log/model.ckpt [default: None]')
-parser.add_argument('--data_dir', default=None, help='Directory to pickle files')
-
+parser.add_argument('--loss', default='edited', help="Change to 'original' for changing to the paper's loss functions")
 FLAGS = parser.parse_args()
 
 # Set training configurations
@@ -53,7 +54,7 @@ DECAY_STEP = FLAGS.decay_step
 DECAY_RATE = FLAGS.decay_rate
 NUM_CHANNEL = 3 if FLAGS.no_intensity else 4  # point feature channel
 NUM_CLASSES = 2  # segmentation has two classes
-
+LOSS = FLAGS.loss
 MODEL = importlib.import_module(FLAGS.model)  # import network module
 MODEL_FILE = os.path.join(ROOT_DIR, 'models', FLAGS.model + '.py')
 LOG_DIR = FLAGS.log_dir
@@ -69,13 +70,10 @@ BN_DECAY_DECAY_STEP = float(DECAY_STEP)
 BN_DECAY_CLIP = 0.99
 
 # Load Frustum Datasets. Use default data paths.
-# "/mnt/nfs/scratch1/kfaria/frustum_data"
-TRAIN_DATASET = provider.FrustumDataset(npoints=NUM_POINT, split='train', rotate_to_center=True, random_flip=True,
-                                        random_shift=True, one_hot=True, subset=100,
-                                        overwritten_data_path=FLAGS.data_dir)
+TRAIN_DATASET = provider.FrustumDataset(npoints=NUM_POINT, split='train',
+                                        rotate_to_center=True, random_flip=True, random_shift=True, one_hot=True, subset=100)
 TEST_DATASET = provider.FrustumDataset(npoints=NUM_POINT, split='val',
-                                       rotate_to_center=True, one_hot=True, subset=100,
-                                       overwritten_data_path=FLAGS.data_dir)
+                                       rotate_to_center=True, one_hot=True, subset=100)
 
 
 def log_string(out_str):
@@ -108,6 +106,7 @@ def get_bn_decay(batch):
 
 def train():
     ''' Main function for training and simple evaluation. '''
+    best_avg_error_so_far = 0.
     with tf.Graph().as_default():
         with tf.device('/gpu:' + str(GPU_INDEX)):
             pointclouds_pl, one_hot_vec_pl, labels_pl, centers_pl, \
@@ -130,7 +129,7 @@ def train():
                                          is_training_pl, bn_decay=bn_decay)
             loss = MODEL.get_loss(labels_pl, centers_pl,
                                   heading_class_label_pl, heading_residual_label_pl,
-                                  size_class_label_pl, size_residual_label_pl, end_points)
+                                  size_class_label_pl, size_residual_label_pl, end_points, loss_type=LOSS)
             tf.summary.scalar('loss', loss)
 
             losses = tf.get_collection('losses')
@@ -278,7 +277,6 @@ def train_one_epoch(sess, ops, train_writer):
         iou2ds_sum += np.sum(iou2ds)
         iou3ds_sum += np.sum(iou3ds)
         iou3d_correct_cnt += np.sum(iou3ds >= 0.7)
-
         if (batch_idx + 1) % 10 == 0:
             log_string(' -- %03d / %03d --' % (batch_idx + 1, num_batches))
             log_string('mean loss: %f' % (loss_sum / 10))
@@ -369,20 +367,22 @@ def eval_one_epoch(sess, ops, test_writer):
                     part_ious[l] = np.sum((segl == l) & (segp == l)) / \
                                    float(np.sum((segl == l) | (segp == l)))
 
+    eval_seg_acc = total_correct / float(total_seen)
+    eval_box_iou_ground_acc = iou2ds_sum / float(num_batches * BATCH_SIZE)
+    eval_box_iou_3d_acc = iou3ds_sum / float(num_batches * BATCH_SIZE)
+    box_est_acc = float(iou3d_correct_cnt) / float(num_batches * BATCH_SIZE)
+
     log_string('eval mean loss: %f' % (loss_sum / float(num_batches)))
-    log_string('eval segmentation accuracy: %f' % \
-               (total_correct / float(total_seen)))
+
+    log_string('eval segmentation accuracy: %f' % eval_seg_acc)
     log_string('eval segmentation avg class acc: %f' % \
                (np.mean(np.array(total_correct_class) / \
                         np.array(total_seen_class, dtype=np.float))))
     log_string('eval box IoU (ground/3D): %f / %f' % \
-               (iou2ds_sum / float(num_batches * BATCH_SIZE), iou3ds_sum / \
-                float(num_batches * BATCH_SIZE)))
-    log_string('eval box estimation accuracy (IoU=0.7): %f' % \
-               (float(iou3d_correct_cnt) / float(num_batches * BATCH_SIZE)))
+               (eval_box_iou_ground_acc, eval_box_iou_3d_acc))
+    log_string('eval box estimation accuracy (IoU=0.7): %f' % (box_est_acc))
 
     EPOCH_CNT += 1
-
 
 if __name__ == "__main__":
     log_string('pid: %s' % (str(os.getpid())))
