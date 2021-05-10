@@ -126,28 +126,27 @@ class FrustumDataset(object):
         self.random_shift = random_shift
         self.rotate_to_center = rotate_to_center
         self.one_hot = one_hot
-        if overwritten_data_path is None:
-            overwritten_data_path = os.path.join(ROOT_DIR,
-                                                 'kitti/frustum_carpedcyc_%s.pickle' % (split))
-        else:
-            overwritten_data_path = os.path.join(overwritten_data_path,
-                                                 'frustum_carpedcyc_%s.pickle' % (split))
-
         self.from_rgb_detection = from_rgb_detection
+        if overwritten_data_path is None:
+            root = ROOT_DIR
+        else:
+            root = overwritten_data_path
         if from_rgb_detection:
+            overwritten_data_path = os.path.join(root, 'frustum_carpedcyc_%s_rgb_detection.pickle' % (split))
             with open(overwritten_data_path, 'rb') as fp:
-                self.id_list = pickle.load(fp)
-                self.box2d_list = pickle.load(fp)
-                self.input_list = pickle.load(fp)
-                self.type_list = pickle.load(fp)
+                self.id_list = pickle.load(fp, encoding='latin1')
+                self.box2d_list = pickle.load(fp, encoding='latin1')
+                self.input_list = pickle.load(fp, encoding='latin1')
+                self.type_list = pickle.load(fp, encoding='latin1')
                 # frustum_angle is clockwise angle from positive x-axis
-                self.frustum_angle_list = pickle.load(fp)
-                self.prob_list = pickle.load(fp)
+                self.frustum_angle_list = pickle.load(fp, encoding='latin1')
+                self.prob_list = pickle.load(fp, encoding='latin1')
 
 
 
 
         else:
+            overwritten_data_path = os.path.join(os.path.join(root,'kitti'), 'frustum_carpedcyc_%s.pickle' % (split))
             with open(overwritten_data_path, 'rb') as fp:
                 self.id_list = pickle.load(fp, encoding='latin1')
                 self.box2d_list = pickle.load(fp, encoding='latin1')

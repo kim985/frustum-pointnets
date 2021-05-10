@@ -38,7 +38,7 @@ parser.add_argument('--decay_step', type=int, default=200000, help='Decay step f
 parser.add_argument('--decay_rate', type=float, default=0.7, help='Decay rate for lr decay [default: 0.7]')
 parser.add_argument('--no_intensity', action='store_true', help='Only use XYZ for training')
 parser.add_argument('--restore_model_path', default=None, help='Restore model path e.g. log/model.ckpt [default: None]')
-parser.add_argument('--loss', default='edited', help="Change to 'original' for changing to the paper's loss functions")
+parser.add_argument('--loss', default='modified', help="Change to 'original' for changing to the paper's loss functions")
 FLAGS = parser.parse_args()
 
 # Set training configurations

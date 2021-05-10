@@ -292,7 +292,7 @@ def test(output_filename, result_dir=None):
 
     test_idxs = np.arange(0, len(TEST_DATASET))
     batch_size = BATCH_SIZE
-    num_batches = len(TEST_DATASET)/batch_size
+    num_batches = int(len(TEST_DATASET)/batch_size)
 
     sess, ops = get_session_and_ops(batch_size=batch_size, num_point=NUM_POINT)
     correct_cnt = 0

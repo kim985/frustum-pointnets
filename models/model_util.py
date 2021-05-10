@@ -296,7 +296,7 @@ def get_loss(mask_label, center_label, \
              size_class_label, size_residual_label, \
              end_points, \
              corner_loss_weight=10.0, \
-             box_loss_weight=1.0, loss_type='edited'):
+             box_loss_weight=1.0, loss_type='modified'):
     ''' Loss functions for 3D object detection.
     Input:
         mask_label: TF int32 tensor in shape (B,N)
@@ -313,17 +313,16 @@ def get_loss(mask_label, center_label, \
             the total_loss is also added to the losses collection
     '''
     # 3D Segmentation loss
-    if loss_type == 'edited':
+    if loss_type == 'modified':
         mask_loss = taylor_softmax(end_points['mask_logits'], mask_label)
     else:
         mask_loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
             logits=end_points['mask_logits'], labels=mask_label))
-
     tf.summary.scalar('3d mask loss', mask_loss)
 
     # Center regression losses
     center_dist = tf.norm(center_label - end_points['center'], axis=-1)
-    if loss_type == 'edited':
+    if loss_type == 'modified':
         center_loss = log_cosh_loss(center_dist)
     else:
         center_loss = huber_loss(center_dist, delta=2.0)
@@ -331,7 +330,7 @@ def get_loss(mask_label, center_label, \
     tf.summary.scalar('center loss', center_loss)
     stage1_center_dist = tf.norm(center_label - \
                                  end_points['stage1_center'], axis=-1)
-    if loss_type == 'edited':
+    if loss_type == 'modified':
         stage1_center_loss = log_cosh_loss(stage1_center_dist)
     else:
         stage1_center_loss = huber_loss(stage1_center_dist, delta=1.0)
@@ -354,7 +353,7 @@ def get_loss(mask_label, center_label, \
         end_points['heading_residuals_normalized'] * tf.to_float(hcls_onehot), axis=1) - \
                        heading_residual_normalized_label
 
-    if loss_type == 'edited':
+    if loss_type == 'modified':
         heading_residual_normalized_loss = log_cosh_loss(heading_residual)
     else:
         heading_residual_normalized_loss = huber_loss(heading_residual, delta=1.0)
@@ -363,7 +362,7 @@ def get_loss(mask_label, center_label, \
                       heading_residual_normalized_loss)
 
     # Size loss
-    if loss_type == 'edited':
+    if loss_type == 'modified':
         size_class_loss = taylor_softmax(end_points['size_scores'], size_class_label)
     else:
         size_class_loss = tf.reduce_mean(
@@ -388,7 +387,7 @@ def get_loss(mask_label, center_label, \
     size_normalized_dist = tf.norm( \
         size_residual_label_normalized - predicted_size_residual_normalized,
         axis=-1)
-    if loss_type == 'edited':
+    if loss_type == 'modified':
         size_residual_normalized_loss = log_cosh_loss(size_normalized_dist)
     else:
         size_residual_normalized_loss = huber_loss(size_normalized_dist, delta=1.0)
@@ -425,7 +424,7 @@ def get_loss(mask_label, center_label, \
 
     corners_dist = tf.minimum(tf.norm(corners_3d_pred - corners_3d_gt, axis=-1),
                               tf.norm(corners_3d_pred - corners_3d_gt_flip, axis=-1))
-    if loss_type == 'edited':
+    if loss_type == 'modified':
         corners_loss = log_cosh_loss(corners_dist)
     else:
         corners_loss = huber_loss(corners_dist, delta=1.0)
