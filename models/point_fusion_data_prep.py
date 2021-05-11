@@ -211,33 +211,33 @@ def process(velodyne_path, label_path=None, calib_path=None, dataformat="bin", l
 
 
 if __name__ == '__main__':
-    train_points, train_labels, train_classes = process(pcd_path, label_path, calib_path=calib_path, dataformat="bin",
-                                                        is_velo_cam=True)
-
-    print(train_classes.shape)
-    np.save('train_classes.npy', train_classes)
-    np.save('train_points.npy', train_points)
-    np.save('train_labels.npy', train_labels)
-
-    print(train_labels.reshape((7481, 24)).shape)
-
-    # run this cell only if images need to be processed again
-    # ***********************************************************************************
-    filenames_imgs = [os.path.join(img_path, d) for d in sorted(os.listdir(img_path)) if d[0] != '.']
-    batch_images = None
-    for d in filenames_imgs:
-        print(d)
-        original = load_img(d, target_size=(224, 224))
-        numpy_image = img_to_array(original)
-        image_batch_cur = np.expand_dims(numpy_image, axis=0)
-        if batch_images is None:
-            batch_images = image_batch_cur
-        else:
-            batch_images = np.concatenate((batch_images, image_batch_cur), axis=0)
-
-    # run this cell only if images need to be processed again. Otherwise, use the saved file in next cell
-    processed_image = resnet50.preprocess_input(batch_images.copy())
-    np.save('processed_image.npy', processed_image)
+    # train_points, train_labels, train_classes = process(pcd_path, label_path, calib_path=calib_path, dataformat="bin",
+    #                                                     is_velo_cam=True)
+    #
+    # print(train_classes.shape)
+    # np.save('train_classes.npy', train_classes)
+    # np.save('train_points.npy', train_points)
+    # np.save('train_labels.npy', train_labels)
+    #
+    # print(train_labels.reshape((7481, 24)).shape)
+    #
+    # # run this cell only if images need to be processed again
+    # # ***********************************************************************************
+    # filenames_imgs = [os.path.join(img_path, d) for d in sorted(os.listdir(img_path)) if d[0] != '.']
+    # batch_images = None
+    # for d in filenames_imgs:
+    #     print(d)
+    #     original = load_img(d, target_size=(224, 224))
+    #     numpy_image = img_to_array(original)
+    #     image_batch_cur = np.expand_dims(numpy_image, axis=0)
+    #     if batch_images is None:
+    #         batch_images = image_batch_cur
+    #     else:
+    #         batch_images = np.concatenate((batch_images, image_batch_cur), axis=0)
+    #
+    # # run this cell only if images need to be processed again. Otherwise, use the saved file in next cell
+    # processed_image = resnet50.preprocess_input(batch_images.copy())
+    # np.save('processed_image.npy', processed_image)
 
     # run this cell only if images need to be processed again by resnet. Otherwise, use the saved file in next cell
     processed_images = np.load('processed_image.npy')
